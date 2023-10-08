@@ -1,0 +1,49 @@
+repos:
+  - repo: local
+    hooks:
+      - id: isort-cmd
+        name: format code - sort imports
+        entry: isort
+        language: system
+        types: [python]
+        stages: [commit]
+      - id: black-cmd
+        name: format code
+        entry: black
+        language: system
+        types: [python]
+        stages: [commit]
+      - id: flake8-cmd
+        name: lint
+        entry: flake8
+        language: system
+        types: [python]
+        stages: [commit]
+      - id: bandit-cmd
+        name: security check
+        entry: bandit
+        args:
+          [
+            "--exclude=setup.py,tests,loaders.py,shares_outstanding.py",
+            "--format=csv",
+            "--recursive",
+            "pricers",
+          ]
+        language: system
+        types: [python]
+        stages: [commit]
+      - id: mypy-cmd
+        name: mypy static type checker
+        entry: mypy
+        language: system
+        types: [python]
+        stages: [commit]
+      - id: pytest-cmd
+        name: test and coverage
+        entry: pytest
+        args: ["--cov", "--cov-fail-under=75"]
+        language: system
+        types: [python]
+        stages: [push]
+        pass_filenames: false
+        always_run: true
