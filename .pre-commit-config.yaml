@@ -27,7 +27,7 @@ repos:
             "--exclude=setup.py,tests,loaders.py,shares_outstanding.py",
             "--format=csv",
             "--recursive",
-            "pricers",
+            "loader",
           ]
         language: system
         types: [python]

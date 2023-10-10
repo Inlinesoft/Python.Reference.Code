@@ -1,4 +1,4 @@
-from pricers.application.services.uow import UnitOfWork
+from loader.application.services.uow import UnitOfWork
 
 
 class DbUnitOfWork(UnitOfWork):

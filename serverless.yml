@@ -1,0 +1,179 @@
+service:
+  name: loader-api
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+
+provider:
+  name: aws
+  runtime: python3.7
+  region: eu-west-1
+  timeout: 30
+  vpc:
+    securityGroupIds:
+      - ${env:AWS_SECURITY_GROUP}
+    subnetIds:
+      "Fn::Split":
+        - ","
+        - ${env:AWS_SUBNET_IDS}
+  endpointType: PRIVATE
+  vpcEndpointIds:
+    - ${env:AWS_VPC_ENPOINT}
+  resourcePolicy:
+    - Effect: Allow
+      Principal: "*"
+      Action: execute-api:Invoke
+      Resource:
+        - execute-api:/*/*/*
+      Condition:
+        StringEquals:
+          "aws:sourceVpce": ${env:AWS_VPC_ENPOINT}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - lambda:InvokeFunction
+        - lambda:InvokeAsync
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "s3:PutObject"
+        - "s3:GetObject"
+      Resource: "arn:aws:s3:::${self:custom.s3databucket}/*"
+  
+
+  # you can define service wide environment variables here
+  environment:
+    API_USERNAME: ${env:API_USERNAME}
+    API_PASSWORD: ${env:API_PASSWORD}
+    DB_URL: ${env:DB_URL}
+    API_STAGE: ${opt:stage,'dev'}
+    API_REGION: ${self:provider.region}
+    API_URL: ${env:API_URL}
+    POWERTOOLS_METRICS_NAMESPACE: ${self:service.name}-${opt:stage,'dev'}
+    POWERTOOLS_SERVICE_NAME: ${self:service.name}
+    LOG_LEVEL: ${env:LOG_LEVEL, 'INFO'}
+
+functions:
+  cloader-importer:
+    handler: loaders_etl.loaders.import_file.handler
+    memorySize: 128
+    timeout: 600 # 10 minutes
+  the-loaders-api:
+    handler: loaders.infrastructure.entrypoints.api.handler
+    memorySize: 1024
+    environment:
+      POWERTOOLS_SERVICE_NAME: ${self:service.name}-api
+    events:
+      - http: ANY /
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors: true
+    alarms:
+      - name: API5XXErrorAlarm
+        namespace: "AWS/ApiGateway"
+        metric: 5XXError
+        threshold: 1
+        statistic: Sum
+        period: 60
+        evaluationPeriods: 1
+        datapointsToAlarm: 1
+        comparisonOperator: GreaterThanOrEqualToThreshold
+        dimensions:
+          - Name: ApiName
+            Value: ${opt:stage, self:provider.stage}-${self:service}
+  the-loaders-db-migrate:
+    handler: db_migrations/run_in_lambda.db_migrate_handler
+    memorySize: 128
+    timeout: 600 # 10 minutes
+  
+  holidays-importer:
+    handler: loaders_etl.importers.holidays.handler
+    memorySize: 128
+    timeout: 300 # 5 minutes
+    layers:
+      - ${cf:pyodbc-layer-${opt:stage, self:provider.stage}.PyodbcLayerExport}
+    environment:
+      lDB_DATABASE: ${env:lDB_PROD_DATABASE}
+      lDB_PASSWORD: ${env:lDB_PROD_PASSWORD}
+      lDB_SERVER: ${env:lDB_PROD_SERVER}
+      lDB_USER: ${env:lDB_PROD_USER}
+ 
+  feed-file-s3-importer:
+    handler: loaders_etl.importers.feed_file_from_s3.handler
+    memorySize: 128
+    events:
+      - s3:
+          bucket: ${env:BUKET1}
+          existing: true
+  
+  ExampleLogging:
+    handler: loaders_etl.importers.example_logging.handler
+    memorySize: 128
+    environment:
+      POWERTOOLS_SERVICE_NAME: example_logging
+      LOG_LEVEL: INFO
+plugins:
+  - serverless-python-requirements
+  - serverless-offline
+  - serverless-local-schedule
+  - serverless-plugin-aws-alerts
+  - serverless-prune-plugin
+custom:
+  prune:
+    automatic: true
+    includeLayers: true
+    number: 10
+  s3databucket: ${self:service.name}-${opt:stage,'dev'}-data-bucket
+  pythonRequirements:
+    slim: true
+    fileName: requirements-deploy.txt
+    usePipenv: false
+    usePoetry: false
+    dockerizePip: false
+    invalidateCaches: true
+    useDownloadCache: false
+    useStaticCache: false
+  alerts:
+    topics:
+      alarm:
+        topic: ${self:service}-${opt:stage, self:provider.stage}-alerts-alarm
+        notifications:
+          - protocol: email
+            endpoint: it@email.com
+        
+    definitions:
+      # handledErrorAlarm:
+      #   description: 'Trigger when a function of pricin pipeline failes.'
+      #   namespace: ${self:service.name}-${opt:stage,'dev'}
+      #   metric: LambdaError
+      #   threshold: 1
+      #   statistic: Sum
+      #   period: 60
+      #   evaluationPeriods: 1
+      #   datapointsToAlarm: 1
+      #   comparisonOperator: GreaterThanOrEqualToThreshold
+      logErrors:
+        metric: logErrors
+        threshold: 1
+        statistic: Sum
+        period: 60
+        evaluationPeriods: 1
+        datapointsToAlarm: 1
+        comparisonOperator: GreaterThanOrEqualToThreshold
+        pattern: '{$.level = "ERROR"}'
+    alarms:
+      - functionErrors
+      - functionThrottles
+      - logErrors
+  
+package:
+  individually: false
+  include:
+    - "!./**"
+    - "README.md"
+    - "db_migrations/**"
+    - "alembic.ini"
+  exclude:
+    - "**"
