@@ -1,0 +1,20 @@
+service: pyodbc-layer
+
+provider:
+  name: aws
+  runtime: python3.7
+  region: eu-west-1
+  timeout: 900
+
+layers:
+  pyodbc:
+    path: python-odbc
+    CompatibleRuntimes: ["python3.7"]
+
+resources:
+  Outputs:
+    PyodbcLayerExport:
+      Value:
+        Ref: PyodbcLambdaLayer
+      Export:
+        Name: ${opt:stage, self:provider.stage}-PyodbcLambdaLayer
