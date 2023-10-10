@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from datetime import date
 from typing import List
 
-from pricers.domain.entities import Config
+from loader.domain.entities import Config
 
 
 class ConfigNotFound(Exception):

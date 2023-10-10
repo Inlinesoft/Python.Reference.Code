@@ -3,7 +3,7 @@ from typing import List
 
 import sqlalchemy
 
-from pricers.application.repositories import (
+from loader.application.repositories import (
     ConfigAlreadyExists,
     ConfigNotFound,
     ConfigsRepository,

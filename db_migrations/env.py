@@ -4,7 +4,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from pricers.infrastructure.repositories.db import tables
+from loader.infrastructure.repositories.db import tables
 
 # add your model's MetaData object here
 # for 'autogenerate' support
