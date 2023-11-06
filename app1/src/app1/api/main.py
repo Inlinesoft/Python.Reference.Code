@@ -24,15 +24,13 @@ def get_prefix():
 
 
 app = FastAPI(
-    title="Pricing API",
-    description="Pricing REST API for streamlined interactions",
+    title="API",
+    description="REST API for streamlined interactions",
     version=loader.__version__,
     openapi_url=get_prefix() + "/openapi.json",
     root_path=get_prefix(),
 )
 
-# https://ui.capmarkets.io/
-# https://ui.tech.io/
 origins = Config.API_CORS_ORIGINS
 app.add_middleware(
     CORSMiddleware,
@@ -56,14 +54,6 @@ def on_start_up():
 def read_current_user(user: User = Depends(get_current_user)):
     return {"username": user.username, "groups": user.groups}
 
-
-app.include_router(
-    operations.router,
-    prefix="/operations",
-    tags=["Operations"],
-    dependencies=[Depends(get_current_user)],
-    responses={404: {"description": "Not found"}},
-)
 
 app.include_router(
     holidays.router,

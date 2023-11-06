@@ -6,7 +6,7 @@ class Executor:
 
     def _execute(self, func, stats):
 
-        sig = inspect.signature(func)
+         
         src = inspect.getsource(func)
         name = func.__name__
         data_point_key = name.replace("calc_", "")
