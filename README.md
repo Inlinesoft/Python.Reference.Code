@@ -12,7 +12,7 @@ Gitlab
 glpat-aLyxrnxfPwtj-2VtQu64
 
 
-.\gitlab-runner.exe register  --url https://gitlab.com  --token glrt-b7hCygoHDMhC72YWWVPf
+.\gitlab-runner.exe register  --url https://gitlab.com  
 
 
 
