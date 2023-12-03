@@ -1,0 +1,81 @@
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Python.gitlab-ci.yml
+
+# Official language image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/python/tags/
+image: python:3.11.6
+
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# https://pip.pypa.io/en/stable/topics/caching/
+cache:
+  paths:
+    - .cache/pip
+
+stages:
+  - build
+  - lint
+  - test
+  - package
+  - deploy
+
+before_script:
+    - python --version ; pip --version  # For debugging
+    - pip install virtualenv
+    - virtualenv venv
+    - source venv/bin/activate
+    - pip install pytest pylint flake8
+
+build:
+  stage: build
+  
+  script:
+    - pip install .
+    # run the command here 5
+  artifacts:
+    paths:
+      - build/*
+
+lint:
+  stage: lint
+  before_script:
+    - pip install pylint flake8
+  script: 
+    - pylint src
+    - flake8 src --statistics --count
+  dependencies:
+    - build
+
+unit_tests:
+  stage: test
+  script: 
+    - pytest tests
+  dependencies:
+    - build
+
+# integration_tests:
+#   stage: test
+#   script: 
+#     - pytest tests
+#   dependencies:
+#     - build
+
+package:
+  stage: package
+  script:
+    - pip install wheel 
+    - python setup.py sdist bdist_wheel
+  artifacts:
+    paths:
+      - dist/*
+
+deploy:
+  stage: deploy
+  script: echo "Define your deployment script!"
+  dependencies:
+    - package
